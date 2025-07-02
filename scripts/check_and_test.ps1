@@ -1,4 +1,4 @@
-Write-Host "🔍 Ejecutando chequeo de código y tests..."
+﻿Write-Host "🔍 Ejecutando chequeo de código y tests..."
 
 # Código limpio
 black .
