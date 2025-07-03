@@ -1,33 +1,35 @@
 import re
-from typing import Optional, Dict
+from typing import Dict, List
 
 
-def parse_expense(text: str) -> Optional[Dict[str, str]]:
+def parse_expenses(text: str) -> List[Dict[str, str]]:
     """
-    Extrae importe, fecha y concepto desde un texto OCR.
-    Retorna un diccionario con los campos o None si no encuentra datos.
+    Extrae múltiples movimientos desde texto OCR.
+    Devuelve una lista de diccionarios con campos: concepto, fecha, importe.
     """
-    # Buscar importe tipo 12,34 o 12.34
-    importe_match = re.search(r"(\d+[.,]\d{2})", text)
-    importe = importe_match.group(1).replace(",", ".") if importe_match else None
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    gastos = []
 
-    # Buscar fecha en formato DD/MM/YYYY o similar
-    fecha_match = re.search(r"(\d{1,2}/\d{1,2}/\d{2,4})", text)
-    fecha = fecha_match.group(1) if fecha_match else None
+    i = 0
+    while i < len(lines) - 1:
+        concepto = lines[i]
+        siguiente = lines[i + 1]
 
-    # Concepto: línea más larga del texto que no contenga el importe ni fecha
-    lineas = [l.strip() for l in text.splitlines() if l.strip()]
-    concepto = max(
-        (l for l in lineas if (importe not in l if importe else True) and (fecha not in l if fecha else True)),
-        key=len,
-        default=None
-    )
+        # Buscar fecha e importe en la siguiente línea
+        fecha_match = re.search(r"(\d{2}/\d{2}/\d{4})", siguiente)
+        importe_match = re.search(
+            r"([-+]?\d+[.,]\d{2}) ?€?", concepto + " " + siguiente
+        )
 
-    if not any([importe, fecha, concepto]):
-        return None
+        if fecha_match and importe_match:
+            gasto = {
+                "concepto": concepto,
+                "fecha": fecha_match.group(1),
+                "importe": importe_match.group(1).replace(",", "."),
+            }
+            gastos.append(gasto)
+            i += 2  # Saltar a siguiente par
+        else:
+            i += 1  # Saltar línea si no encaja
 
-    return {
-        "importe": importe,
-        "fecha": fecha,
-        "concepto": concepto,
-    }
+    return gastos
