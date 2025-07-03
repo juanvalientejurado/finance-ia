@@ -1,8 +1,8 @@
 from app.ocr.reader import extract_text_from_image
-from app.parser.parser import parse_expense
+from app.parser.parser import parse_expenses
 
-texto = extract_text_from_image("example.jpg")
+texto = extract_text_from_image("data/example.jpg")
 print("Texto OCR:", texto)
 
-gasto = parse_expense(texto)
-print("Gasto estructurado:", gasto)
+gastos = parse_expenses(texto)
+print("Gasto estructurado:", gastos)
