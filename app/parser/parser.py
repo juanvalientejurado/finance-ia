@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict
+from typing import Dict, List
 
 
 def parse_expenses(text: str) -> List[Dict[str, str]]:
@@ -17,13 +17,15 @@ def parse_expenses(text: str) -> List[Dict[str, str]]:
 
         # Buscar fecha e importe en la siguiente línea
         fecha_match = re.search(r"(\d{2}/\d{2}/\d{4})", siguiente)
-        importe_match = re.search(r"([-+]?\d+[.,]\d{2}) ?€?", concepto + " " + siguiente)
+        importe_match = re.search(
+            r"([-+]?\d+[.,]\d{2}) ?€?", concepto + " " + siguiente
+        )
 
         if fecha_match and importe_match:
             gasto = {
                 "concepto": concepto,
                 "fecha": fecha_match.group(1),
-                "importe": importe_match.group(1).replace(",", ".")
+                "importe": importe_match.group(1).replace(",", "."),
             }
             gastos.append(gasto)
             i += 2  # Saltar a siguiente par
