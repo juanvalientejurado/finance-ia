@@ -11,15 +11,11 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 os.environ["TESSDATA_PREFIX"] = r"C:\Program Files\Tesseract-OCR\tessdata"
 
 
-def extract_text_from_image(image_path: str) -> str:
+def extract_text_from_image(image: Image.Image ) -> str:
     """
     Extrae texto desde una imagen usando OCR (Tesseract).
     """
-    path = Path(image_path)
-    if not path.exists():
-        raise FileNotFoundError(f"No se encontró la imagen: {image_path}")
-
-    image = Image.open(image_path)
+    image.show()  # Esto abrirá la imagen en el visor predeterminado
     text = pytesseract.image_to_string(
         image, lang="spa"
     )  # También puedes probar con 'eng' o 'spa+eng'

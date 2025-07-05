@@ -1,4 +1,4 @@
-from app.parser.parser import parse_expenses
+from app.parser.parser_image import parse_expenses
 
 
 def test_parser_with_fixture(sample_text):

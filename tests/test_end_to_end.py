@@ -1,7 +1,7 @@
 import os
 
-from app.ocr.reader import extract_text_from_image
-from app.parser.parser import parse_expenses
+from app.ocr.image_reader import extract_text_from_image
+from app.parser.parser_image import parse_expenses
 
 
 def test_ocr_and_parse_with_real_image():
