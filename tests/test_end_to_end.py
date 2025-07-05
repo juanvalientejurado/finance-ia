@@ -1,4 +1,5 @@
 import os
+
 from app.ocr.reader import extract_text_from_image
 from app.parser.parser import parse_expenses
 
