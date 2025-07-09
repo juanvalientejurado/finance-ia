@@ -31,13 +31,12 @@ Ideal para personas que quieren tener el control completo de sus finanzas sin de
 
 3. Añade dependencias principales:
    ```bash
-   uv add streamlit pytesseract pandas pdfplumber scikit-learn joblib pillow
+   uv sync
    ```
-
-4. Añade dependencias de desarrollo:
-   ```bash
-   uv add --dev pytest black flake8 isort
-   ```
+4. Dependencias extra:
+   tesseract-ocr: https://github.com/UB-Mannheim/tesseract/wiki
+   complemento español: https://github.com/tesseract-ocr/tessdata/blob/main/spa.traineddata?raw=true
+   poppler: Desvargar (https://github.com/oschwartz10612/poppler-windows/releases), poner en C:\ProgramFiles . Añadir al PATH C:\Program Files\poppler-24.08.0\Library\bin . Reiniciar editor o terminal
 
 5. Ejecuta la app:
    ```bash
