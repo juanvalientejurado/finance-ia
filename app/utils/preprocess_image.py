@@ -1,6 +1,6 @@
-from PIL import Image
 import cv2
 import numpy as np
+from PIL import Image
 
 
 def preprocess_image_grays_to_black(path: str) -> Image.Image:

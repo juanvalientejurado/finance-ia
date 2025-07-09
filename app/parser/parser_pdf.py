@@ -1,7 +1,9 @@
-from typing import List, Dict
+from typing import Dict, List
+
 
 def parse_vertical_blocks(text: str | list[str]) -> List[Dict[str, str]]:
     import re
+
     if isinstance(text, list):
         text = "\n".join(text)
 
@@ -40,11 +42,8 @@ def parse_vertical_blocks(text: str | list[str]) -> List[Dict[str, str]]:
 
     gastos = []
     for concepto, fecha, importe, saldo in zip(conceptos, fechas, importes, saldos):
-        gastos.append({
-            "concepto": concepto,
-            "fecha": fecha,
-            "importe": importe,
-            "saldo": saldo
-        })
+        gastos.append(
+            {"concepto": concepto, "fecha": fecha, "importe": importe, "saldo": saldo}
+        )
 
     return gastos

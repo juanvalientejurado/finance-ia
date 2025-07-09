@@ -1,14 +1,16 @@
-from pdf2image import convert_from_path
-from pathlib import Path
-import pytesseract
-from typing import List
 import os
+from pathlib import Path
+from typing import List
+
+import pytesseract
+from pdf2image import convert_from_path
 
 # Ruta a Tesseract instalada en Windows
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # Asegurar que el path a tessdata esté configurado
 os.environ["TESSDATA_PREFIX"] = r"C:\Program Files\Tesseract-OCR\tessdata"
+
 
 def extract_text_from_pdf(pdf_path: str, lang: str = "spa") -> List[str]:
     pdf_file = Path(pdf_path)
