@@ -1,23 +1,34 @@
+from pprint import pprint
+
+from app.db.db import get_all_gastos, init_db, insert_gastos_from_list
 from app.ocr.image_reader import extract_text_from_image
 from app.ocr.pdf_reader import extract_text_from_pdf
 from app.parser.parser_image import parse_expenses
 from app.parser.parser_pdf import parse_vertical_blocks
-from app.utils.preprocess_image import preprocess_image_grays_to_black
-from app.utils.text import normalize_ocr_output
 
-# OCR desde imagen
-preprocessed_image = preprocess_image_grays_to_black("data/example.jpg")
-texto = extract_text_from_image(preprocessed_image)
-norm_text = normalize_ocr_output(texto)
-gastos = parse_expenses(norm_text)
 
-import pprint
+def main():
+    # Inicializa la base de datos
+    init_db()
 
-pprint.pprint(gastos)
+    print("📄 Procesando PDF...")
+    texto_pdf = extract_text_from_pdf("data/extractDocument_20250704.pdf")
+    gastos_pdf = parse_vertical_blocks(texto_pdf)
+    insert_gastos_from_list(
+        gastos_pdf, origen="pdf", archivo="extractDocument_20250704.pdf"
+    )
+    print(f"✅ {len(gastos_pdf)} gastos insertados desde PDF.\n")
 
-# OCR desde PDF
-texto_pdf = extract_text_from_pdf("data/extractDocument_20250704.pdf")
-norm_text = normalize_ocr_output(texto_pdf)
-gastos_pdf = parse_vertical_blocks(norm_text)
+    print("🖼️ Procesando imagen...")
+    texto_img = extract_text_from_image("data/example.jpg")
+    gastos_img = parse_expenses(texto_img)
+    insert_gastos_from_list(gastos_img, origen="imagen", archivo="example.jpg")
+    print(f"✅ {len(gastos_img)} gastos insertados desde imagen.\n")
 
-pprint.pprint(gastos_pdf)
+    print("📊 Gastos totales en la base de datos:\n")
+    gastos_total = get_all_gastos()
+    pprint(gastos_total)
+
+
+if __name__ == "__main__":
+    main()
