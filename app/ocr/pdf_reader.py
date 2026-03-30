@@ -5,11 +5,11 @@ from typing import List
 import pytesseract
 from pdf2image import convert_from_path
 
-# Ruta a Tesseract instalada en Windows
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Ruta a Tesseract instalada en macOS (usando Homebrew)
+pytesseract.pytesseract.tesseract_cmd = "/opt/homebrew/bin/tesseract"
 
 # Asegurar que el path a tessdata esté configurado
-os.environ["TESSDATA_PREFIX"] = r"C:\Program Files\Tesseract-OCR\tessdata"
+os.environ["TESSDATA_PREFIX"] = "/opt/homebrew/Cellar/tesseract/5.5.2/share/tessdata"
 
 
 def extract_text_from_pdf(pdf_path: str, lang: str = "spa") -> List[str]:
