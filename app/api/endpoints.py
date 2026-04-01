@@ -1,6 +1,7 @@
 """Endpoints de la API REST de GastaIA."""
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from typing import Optional
 from pathlib import Path
 from PIL import Image
 import io
@@ -118,18 +119,38 @@ async def upload_expense_pdf(file: UploadFile = File(...)):
 
 
 @router.get("/expenses", response_model=GastosListResponse)
-async def get_all_expenses():
-    """Obtener todos los gastos guardados."""
+async def get_all_expenses(tipo: Optional[str] = Query(None, description="Filtrar por tipo: 'gasto' o 'ingreso'")):
+    """Obtener todos los gastos e ingresos guardados.
+    
+    Args:
+        tipo: Filtro opcional ('gasto', 'ingreso' o None para ambos)
+    """
     try:
         gastos = db.get_all_gastos()
+        
+        # Filtrar por tipo si se especifica
+        if tipo:
+            if tipo.lower() == "gasto":
+                gastos = [g for g in gastos if g["importe"] < 0]
+                mensaje = f"Se encontraron {len(gastos)} gastos"
+            elif tipo.lower() == "ingreso":
+                gastos = [g for g in gastos if g["importe"] > 0]
+                mensaje = f"Se encontraron {len(gastos)} ingresos"
+            else:
+                raise HTTPException(status_code=400, detail="Tipo debe ser 'gasto' o 'ingreso'")
+        else:
+            mensaje = f"Se encontraron {len(gastos)} movimientos"
+        
         return {
             "success": True,
-            "message": f"Se encontraron {len(gastos)} gastos",
+            "message": mensaje,
             "total": len(gastos),
             "data": gastos
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener gastos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener movimientos: {str(e)}")
 
 
 @router.get("/expenses/{gasto_id}", response_model=ExpensesResponse)
@@ -176,37 +197,51 @@ async def delete_expense(gasto_id: int):
 
 @router.get("/expenses/stats/summary", response_model=ExpensesResponse)
 async def get_expenses_summary():
-    """Obtener resumen de gastos (total, cantidad, promedio)."""
+    """Obtener resumen separado de gastos e ingresos."""
     try:
-        gastos = db.get_all_gastos()
+        todos = db.get_all_gastos()
         
-        if not gastos:
-            return {
-                "success": True,
-                "message": "No hay gastos registrados",
-                "data": {
-                    "total_gastos": 0,
-                    "cantidad": 0,
-                    "promedio": 0,
-                    "mayorgasto": 0,
-                    "menorgasto": 0
-                }
-            }
+        # Separar gastos e ingresos
+        gastos = [g for g in todos if g["importe"] < 0]
+        ingresos = [g for g in todos if g["importe"] > 0]
         
-        importes = [float(g["importe"]) for g in gastos]
-        total = sum(importes)
-        cantidad = len(gastos)
-        promedio = total / cantidad if cantidad > 0 else 0
+        # Calcular estadísticas de gastos
+        importes_gastos = [abs(float(g["importe"])) for g in gastos]
+        total_gastos = sum(importes_gastos)
+        promedio_gastos = total_gastos / len(gastos) if gastos else 0
+        mayor_gasto = max(importes_gastos) if gastos else 0
+        menor_gasto = min(importes_gastos) if gastos else 0
+        
+        # Calcular estadísticas de ingresos
+        importes_ingresos = [float(g["importe"]) for g in ingresos]
+        total_ingresos = sum(importes_ingresos)
+        promedio_ingresos = total_ingresos / len(ingresos) if ingresos else 0
+        mayor_ingreso = max(importes_ingresos) if ingresos else 0
+        menor_ingreso = min(importes_ingresos) if ingresos else 0
+        
+        # Balance neto
+        balance = total_ingresos - total_gastos
         
         return {
             "success": True,
-            "message": "Resumen de gastos calculado",
+            "message": "Resumen de movimientos calculado",
             "data": {
-                "total_gastos": round(total, 2),
-                "cantidad": cantidad,
-                "promedio": round(promedio, 2),
-                "mayorgasto": round(max(importes), 2),
-                "menorgasto": round(min(importes), 2)
+                "gastos": {
+                    "cantidad": len(gastos),
+                    "total": round(total_gastos, 2),
+                    "promedio": round(promedio_gastos, 2),
+                    "mayor": round(mayor_gasto, 2),
+                    "menor": round(menor_gasto, 2)
+                },
+                "ingresos": {
+                    "cantidad": len(ingresos),
+                    "total": round(total_ingresos, 2),
+                    "promedio": round(promedio_ingresos, 2),
+                    "mayor": round(mayor_ingreso, 2),
+                    "menor": round(menor_ingreso, 2)
+                },
+                "balance": round(balance, 2),
+                "total_movimientos": len(todos)
             }
         }
     except Exception as e:

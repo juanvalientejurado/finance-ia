@@ -33,6 +33,16 @@ class Gasto(GastoBase):
     id: int = Field(..., description="ID único del gasto")
     created_at: str = Field(..., description="Fecha de creación del gasto")
 
+    @property
+    def tipo(self) -> str:
+        """Determina si es un gasto o ingreso basado en el signo del importe."""
+        return "ingreso" if self.importe > 0 else "gasto"
+    
+    @property
+    def importe_absoluto(self) -> float:
+        """Retorna el valor absoluto del importe."""
+        return abs(self.importe)
+
     class Config:
         from_attributes = True
 
