@@ -125,3 +125,6 @@ MIT © 2025 [Tu Nombre o Alias]
 uv run python main.py
 # O directamente:
 uv run uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Testing 
+uv run pytest tests/test_api.py -v

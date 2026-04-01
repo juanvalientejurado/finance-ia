@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class HealthResponse(BaseModel):
@@ -32,6 +32,8 @@ class Gasto(GastoBase):
     """Esquema de gasto con ID."""
     id: int = Field(..., description="ID único del gasto")
     created_at: str = Field(..., description="Fecha de creación del gasto")
+    
+    model_config = ConfigDict(from_attributes=True)
 
     @property
     def tipo(self) -> str:
@@ -42,9 +44,6 @@ class Gasto(GastoBase):
     def importe_absoluto(self) -> float:
         """Retorna el valor absoluto del importe."""
         return abs(self.importe)
-
-    class Config:
-        from_attributes = True
 
 
 class ExpensesResponse(BaseModel):
