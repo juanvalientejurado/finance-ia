@@ -65,4 +65,24 @@ def get_all_gastos() -> List[Dict[str, str]]:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM gastos ORDER BY fecha DESC")
         return [dict(row) for row in cursor.fetchall()]
-       
+
+
+def get_gasto_by_id(gasto_id: int) -> Optional[Dict[str, str]]:
+    "Obtenemos un gasto específico por su ID"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM gastos WHERE id = ?", (gasto_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def delete_gasto(gasto_id: int) -> bool:
+    "Eliminamos un gasto por su ID"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM gastos WHERE id = ?", (gasto_id,))
+        conn.commit()
+        return cursor.rowcount > 0
