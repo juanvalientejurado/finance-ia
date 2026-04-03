@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GastaIA - Panel de Control</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">
+        <h1>GastaIA</h1>
+        <small>Control de gastos inteligente</small>
+      </div>
+      <nav>
+        <button id="btn-refresh">Actualizar</button>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="grid" aria-label="Resumen de finanzas">
+        <article class="card" id="card-balance">
+          <h2>Balance</h2>
+          <p id="balance">--</p>
+        </article>
+        <article class="card" id="card-total-gastos">
+          <h2>Total gastos</h2>
+          <p id="total-gastos">--</p>
+        </article>
+        <article class="card" id="card-total-ingresos">
+          <h2>Total ingresos</h2>
+          <p id="total-ingresos">--</p>
+        </article>
+        <article class="card" id="card-movimientos">
+          <h2>Movimientos</h2>
+          <p id="total-movimientos">--</p>
+        </article>
+      </section>
+
+      <section class="box" aria-label="Cargar documento">
+        <h2>Subir comprobante</h2>
+        <div class="upload-group">
+          <input type="file" id="file-input" accept="image/*,.pdf" />
+          <button id="btn-upload">Subir</button>
+        </div>
+        <p id="upload-status" class="message"></p>
+      </section>
+
+      <section class="box" aria-label="Filtros y listado de gastos">
+        <h2>Movimientos</h2>
+        <div class="filters">
+          <label>
+            Mostrar:
+            <select id="tipo-filtro">
+              <option value="all">Todos</option>
+              <option value="gasto">Gastos</option>
+              <option value="ingreso">Ingresos</option>
+            </select>
+          </label>
+          <button id="btn-filter">Aplicar</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="movimientos-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Importe</th>
+                <th>Origen</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
