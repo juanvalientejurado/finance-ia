@@ -1,7 +1,7 @@
 """Endpoints de la API REST de GastaIA."""
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
-from typing import Optional
+from typing import Optional, List
 from pathlib import Path
 from PIL import Image
 import io
@@ -11,7 +11,12 @@ from app.ocr.pdf_reader import extract_text_from_pdf
 from app.parser.parser_image import parse_expenses
 from app.parser.parser_pdf import parse_vertical_blocks
 from app.db import db
-from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse
+from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse, GastoCreate, GastoResponse
+from pydantic import BaseModel
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: List[int]
 
 router = APIRouter()
 
@@ -172,6 +177,39 @@ async def get_expense(gasto_id: int):
         raise HTTPException(status_code=500, detail=f"Error al obtener gasto: {str(e)}")
 
 
+@router.put("/expenses/{gasto_id}", response_model=GastoResponse)
+async def update_expense(gasto_id: int, gasto: GastoCreate):
+    """Actualizar datos de un gasto existente."""
+    try:
+        existing = db.get_gasto_by_id(gasto_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail=f"Gasto con ID {gasto_id} no encontrado")
+
+        updated = db.update_gasto(
+            gasto_id=gasto_id,
+            concepto=gasto.concepto,
+            fecha=gasto.fecha,
+            importe=gasto.importe,
+            saldo=gasto.saldo,
+            origen=gasto.origen,
+            archivo=gasto.archivo,
+        )
+
+        if not updated:
+            raise HTTPException(status_code=500, detail="No se pudo actualizar el gasto")
+
+        gasto_actualizado = db.get_gasto_by_id(gasto_id)
+        return {
+            "success": True,
+            "message": f"Gasto {gasto_id} actualizado correctamente",
+            "data": gasto_actualizado
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar gasto: {str(e)}")
+
+
 @router.delete("/expenses/{gasto_id}", response_model=ExpensesResponse)
 async def delete_expense(gasto_id: int):
     """Eliminar un gasto por ID."""
@@ -193,6 +231,30 @@ async def delete_expense(gasto_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar gasto: {str(e)}")
+
+
+@router.post("/expenses/batch-delete", response_model=ExpensesResponse)
+async def batch_delete_expenses(request: BatchDeleteRequest):
+    """Eliminar varios gastos de una vez."""
+    try:
+        ids = request.ids
+        if not ids:
+            raise HTTPException(status_code=400, detail="Lista de IDs vacía")
+
+        eliminados = 0
+        for gasto_id in ids:
+            if db.delete_gasto(gasto_id):
+                eliminados += 1
+
+        return {
+            "success": True,
+            "message": f"Se eliminaron {eliminados} registros",
+            "data": {"eliminados": eliminados}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en eliminación masiva: {str(e)}")
 
 
 @router.get("/expenses/stats/summary", response_model=ExpensesResponse)

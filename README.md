@@ -80,6 +80,19 @@ curl http://127.0.0.1:8000/api/v1/expenses/stats/summary
 - `GET /api/v1/expenses/stats/summary` (métricas de balance)
 - `POST /api/v1/expenses/from-image` (subir imagen)
 - `POST /api/v1/expenses/from-pdf` (subir PDF)
+- `DELETE /api/v1/expenses/{id}` (eliminar registro)
+- `PUT /api/v1/expenses/{id}` (editar registro)
+- `POST /api/v1/expenses/batch-delete` (eliminar múltiples registros)
+
+### 🆕 Nuevas mejoras implementadas
+- UI con pestañas: `Dashboard`, `Subir archivo`, `Gastos`.
+- Drag and drop para subida de archivos en `Subir archivo`.
+- Filtro `gastos`/`ingresos` se aplica inmediatamente al cambiar opción.
+- Actions de `Editar`/`Eliminar` aparecen al pasar el ratón sobre la fila.
+- Selección múltiple de gastos con checkbox y botón `Eliminar seleccionados`.
+- Balance y saldo total cambian de color (verde positivo / rojo negativo).
+- Placeholder de gráfico circular por categoría (futura mejora).
+- `Saldo total de cuenta` ahora visible en dashboard.
 
 ---
 
