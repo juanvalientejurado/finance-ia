@@ -47,41 +47,81 @@
           </article>
         </div>
         <div class="chart-panel">
-          <h3>Resumen por categoría (próxima fase)</h3>
-          <p>Gráfico tipo pastel disponible en siguiente iteración.</p>
-          <div id="pie-chart-placeholder">[DUMMY PASTEL POR CATEGORÍA]</div>
+          <h3>Resumen por categoría</h3>
+          <p>Visualiza el total por categoría de los movimientos registrados.</p>
+          <div id="category-chart" class="category-chart"></div>
         </div>
       </section>
 
       <section class="panel" id="upload">
-        <div class="box"> 
-          <h2>Subir comprobante</h2>
-          <div id="drop-zone" class="drop-zone">
-            <p>Arrastra y suelta archivo aquí</p>
-            <p>o haz clic para seleccionar imagen/PDF</p>
-            <input type="file" id="file-input" accept="image/*,.pdf" />
+        <div class="upload-grid">
+          <div class="box"> 
+            <h2>📄 Subir comprobante</h2>
+            <div id="drop-zone" class="drop-zone">
+              <p>Arrastra y suelta archivo aquí</p>
+              <p>o haz clic para seleccionar imagen/PDF</p>
+              <input type="file" id="file-input" accept="image/*,.pdf" />
+            </div>
+            <button id="btn-upload" class="primary">Subir</button>
+            <p id="upload-status" class="message"></p>
+            <small class="hint">Tu documento se procesa y los gastos se cargan automáticamente.</small>
           </div>
-          <button id="btn-upload" class="primary">Subir</button>
-          <p id="upload-status" class="message"></p>
-          <small class="hint">Tu documento se procesa y los gastos se cargan automáticamente.</small>
+          
+          <div class="box">
+            <h2>🏦 Importar CSV bancario</h2>
+            <div class="bank-upload-section">
+              <label for="bank-select">Banco:</label>
+              <select id="bank-select" class="bank-select">
+                <option value="generic">Genérico</option>
+                <option value="bbva">BBVA</option>
+                <option value="santander">Santander</option>
+                <option value="bankinter">Bankinter</option>
+                <option value="caixabank">CaixaBank</option>
+              </select>
+              <input type="file" id="bank-file-input" accept=".csv" />
+              <button id="btn-upload-bank" class="secondary">Importar CSV</button>
+            </div>
+            <p id="bank-upload-status" class="message"></p>
+            <small class="hint">
+              Descarga tu extracto bancario en formato CSV desde la banca online.<br>
+              Se detectarán automáticamente las transacciones y se clasificarán por categoría.
+            </small>
+          </div>
         </div>
       </section>
 
       <section class="panel" id="details">
         <div class="box">
           <h2>Movimientos</h2>
-          <div class="filters">
-            <label>
-              Mostrar:
-              <select id="tipo-filtro">
-                <option value="all">Todos</option>
-                <option value="gasto">Gastos</option>
-                <option value="ingreso">Ingresos</option>
-              </select>
-            </label>
-            <button id="btn-filter">Aplicar</button>
-            <button id="btn-delete-selected" class="danger">Eliminar seleccionados</button>
-          </div>
+            <div class="manual-box">
+              <h3>Agregar movimiento</h3>
+              <form id="manual-form" class="manual-form">
+                <div class="manual-row">
+                  <input type="date" id="manual-fecha" required />
+                  <input type="text" id="manual-concepto" placeholder="Concepto" required />
+                  <input type="text" id="manual-categoria" placeholder="Categoría" />
+                </div>
+                <div class="manual-row">
+                  <input type="number" step="0.01" id="manual-importe" placeholder="Importe" required />
+                  <input type="text" id="manual-origen" placeholder="Origen" />
+                  <button type="submit" class="primary">Agregar</button>
+                </div>
+              </form>
+              <p id="manual-status" class="message"></p>
+            </div>
+            <div class="filters">
+              <label>
+                Mostrar:
+                <select id="tipo-filtro">
+                  <option value="all">Todos</option>
+                  <option value="gasto">Gastos</option>
+                  <option value="ingreso">Ingresos</option>
+                </select>
+              </label>
+              <button id="btn-filter">Aplicar</button>
+              <button id="btn-reclassify" class="secondary">Reclasificar gastos</button>
+              <button id="btn-delete-selected" class="danger">Eliminar seleccionados</button>
+            </div>
 
           <div class="table-wrapper">
             <table id="movimientos-table">
@@ -91,6 +131,7 @@
                   <th>ID</th>
                   <th>Fecha</th>
                   <th>Concepto</th>
+                  <th>Categoría</th>
                   <th>Importe</th>
                   <th>Origen</th>
                   <th>Acciones</th>
@@ -105,6 +146,7 @@
             <form id="edit-form">
               <input type="date" id="edit-fecha" required />
               <input type="text" id="edit-concepto" placeholder="Concepto" required />
+              <input type="text" id="edit-categoria" placeholder="Categoría" />
               <input type="number" step="0.01" id="edit-importe" placeholder="Importe" required />
               <input type="text" id="edit-origen" placeholder="Origen" />
               <div class="edit-actions">

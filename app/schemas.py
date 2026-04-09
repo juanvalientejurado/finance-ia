@@ -28,6 +28,26 @@ class GastoCreate(GastoBase):
     pass
 
 
+class ReclassifyRequest(BaseModel):
+    """Esquema para reclasificar un gasto manualmente."""
+    categoria: str = Field(..., min_length=1, description="Nueva categoría para el gasto")
+
+
+class BankConnectionRequest(BaseModel):
+    """Esquema para conectar con un banco."""
+    bank_name: str = Field(..., description="Nombre del banco")
+    username: str = Field(..., description="Usuario de banca online")
+    password: str = Field(..., description="Contraseña (solo para desarrollo)")
+
+
+class BankTransaction(BaseModel):
+    """Esquema para transacciones bancarias."""
+    fecha: str = Field(..., description="Fecha de la transacción")
+    concepto: str = Field(..., description="Descripción de la transacción")
+    importe: float = Field(..., description="Importe de la transacción")
+    saldo: Optional[float] = Field(None, description="Saldo después de la transacción")
+
+
 class Gasto(GastoBase):
     """Esquema de gasto con ID."""
     id: int = Field(..., description="ID único del gasto")

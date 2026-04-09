@@ -31,8 +31,78 @@ td { font-size: 0.92rem; color: #2a3555; }
 tr.positive-row td { background: rgba(82, 191, 132, 0.08); }
 tr.negative-row td { background: rgba(230, 92, 114, 0.08); }
 .action-btn { border: 0; border-radius: 8px; padding: 0.26rem 0.6rem; font-size: 0.82rem; cursor: pointer; margin-right: 0.25rem; }
-.action-btn.edit { background: #2a9d8f; color: #fff; }
+.action-btn.reclassify { background: #fca311; color: #fff; }
 .action-btn.delete { background: #e63946; color: #fff; }
+
+.categoria-cell {
+  cursor: pointer;
+  padding: 0.25rem;
+  min-height: 1.2em;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.categoria-cell:hover {
+  background: rgba(0, 122, 204, 0.1);
+}
+
+.categoria-cell:hover::after {
+  content: "✏️";
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.categoria-placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.categoria-input {
+  border: 1px solid #007acc;
+  background: #fff;
+  width: 100%;
+  padding: 0.2rem;
+  font-size: 0.9rem;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.bank-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bank-select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
 .edit-panel { margin-top: 1rem; background: #f7f9ff; border: 1px solid #dce8ff; border-radius: 12px; padding: 1rem; }
 .edit-panel h3 { margin: 0 0 0.8rem; color: #273759; }
 .edit-actions { display: flex; gap: 0.6rem; }
@@ -52,7 +122,23 @@ tr:hover .action-btn { opacity: 1; visibility: visible; }
 #card-balance.positive p, #card-saldo-cuenta.positive p { color: #0f8f48; }
 #card-balance.negative p, #card-saldo-cuenta.negative p { color: #d91b3d; }
 .chart-panel { margin-top: 1rem; padding: 1rem; border: 1px solid #e0e8fa; border-radius: 12px; background: #fff; }
-#pie-chart-placeholder { min-height: 140px; border-radius: 10px; background: linear-gradient(120deg, rgba(233,242,255,1) 0%, rgba(252,255,255,1) 100%); border: 1px dashed #a9caff; display: grid; place-items: center; color: #4f648d; font-size: 0.95rem; }
+.category-chart { display: grid; gap: 1rem; padding: 1rem; min-height: 220px; border-radius: 14px; background: linear-gradient(120deg, rgba(233,242,255,1) 0%, rgba(252,255,255,1) 100%); border: 1px solid #d8e5ff; }
+.pie-chart-wrapper { display: grid; gap: 1rem; grid-template-columns: minmax(180px, 260px) 1fr; align-items: center; }
+.pie-chart-svg { width: 100%; max-width: 260px; height: auto; }
+.pie-legend { display: grid; gap: 0.75rem; }
+.pie-legend-item { display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; color: #2a3555; cursor: pointer; padding: 0.5rem 0.65rem; border-radius: 12px; transition: background 0.2s ease; background: rgba(255,255,255,0.85); }
+.pie-legend-item:hover { background: rgba(67,117,246,0.12); }
+.pie-legend-item.selected { background: rgba(67,117,246,0.16); }
+.pie-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.pie-category { font-weight: 700; }
+.pie-value { margin-left: auto; color: #4f648d; }
+.manual-box { margin-bottom: 1rem; padding: 1rem; border-radius: 14px; border: 1px solid #dce8ff; background: #fbfdff; }
+.manual-box h3 { margin: 0 0 0.85rem; color: #1f2a44; }
+.manual-form { display: grid; gap: 0.85rem; }
+.manual-row { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: center; }
+.manual-row button { min-width: 140px; align-self: end; }
+.category-empty { color: #4f648d; font-size: 0.95rem; display: grid; place-items: center; min-height: 120px; }
+@media (max-width: 850px) { .pie-chart-wrapper { grid-template-columns: 1fr; } }
 @media (max-width: 950px) { .bar { flex-wrap: wrap; } .tabs { width: 100%; } }
 @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .bar { flex-direction: column; align-items: flex-start; } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }

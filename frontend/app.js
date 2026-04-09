@@ -1,4 +1,7 @@
-const API_BASE = "/api/v1";
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM loaded, initializing bank upload...");
+});
 const statusEl = document.getElementById("upload-status");
 const tableStatusEl = document.getElementById("table-status");
 const tableBody = document.querySelector("#movimientos-table tbody");
@@ -7,14 +10,29 @@ const totalGastosEl = document.getElementById("total-gastos");
 const totalIngresosEl = document.getElementById("total-ingresos");
 const totalMovimientosEl = document.getElementById("total-movimientos");
 
-const tipoFiltro = document.getElementById("tipo-filtro");
-const selectAllCheckbox = document.getElementById("select-all");
-const btnDeleteSelected = document.getElementById("btn-delete-selected");
-const fileInput = document.getElementById("file-input");
+const API_BASE = "/api/v1";
 const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
 const btnUpload = document.getElementById("btn-upload");
 const btnRefresh = document.getElementById("btn-refresh");
 const btnFilter = document.getElementById("btn-filter");
+
+const tipoFiltro = document.getElementById("tipo-filtro");
+const selectAllCheckbox = document.getElementById("select-all");
+const btnDeleteSelected = document.getElementById("btn-delete-selected");
+const btnReclassify = document.getElementById("btn-reclassify");
+const manualForm = document.getElementById("manual-form");
+const manualStatus = document.getElementById("manual-status");
+const manualFecha = document.getElementById("manual-fecha");
+const manualConcepto = document.getElementById("manual-concepto");
+const manualCategoria = document.getElementById("manual-categoria");
+const manualImporte = document.getElementById("manual-importe");
+const manualOrigen = document.getElementById("manual-origen");
+const bankFileInput = document.getElementById("bank-file-input");
+const btnUploadBank = document.getElementById("btn-upload-bank");
+const bankUploadStatus = document.getElementById("bank-upload-status");
+const bankSelect = document.getElementById("bank-select");
+let currentCategoryFilter = null;
 
 const panels = document.querySelectorAll(".panel");
 const tabButtons = document.querySelectorAll(".tab");
@@ -26,6 +44,9 @@ const editFields = {
   concepto: document.getElementById("edit-concepto"),
   importe: document.getElementById("edit-importe"),
   origen: document.getElementById("edit-origen"),
+  categoria: document.getElementById("edit-categoria"),
+  saldo: null,
+  archivo: null,
 };
 const editCancel = document.getElementById("edit-cancel");
 let currentView = "dashboard";
@@ -80,6 +101,127 @@ function formatCurrency(value) {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value);
 }
 
+function getNormalizedCategory(categoria) {
+  return categoria && String(categoria).trim() ? String(categoria).trim().toLowerCase() : "otros";
+}
+
+function applyCategoryFilter(categoria) {
+  if (currentCategoryFilter === categoria) {
+    currentCategoryFilter = null;
+    tableStatusEl.textContent = "Filtro de categoría desactivado.";
+  } else {
+    currentCategoryFilter = categoria;
+    tableStatusEl.textContent = `Filtrando categoría: ${categoria}`;
+  }
+
+  const chartRoot = document.getElementById("category-chart");
+  if (chartRoot) {
+    chartRoot.querySelectorAll(".pie-legend-item").forEach((item) => {
+      item.classList.toggle("selected", item.dataset.category === currentCategoryFilter);
+    });
+  }
+
+  renderMovements(tipoFiltro.value);
+}
+
+function renderCategoryChart(data) {
+  const chartRoot = document.getElementById("category-chart");
+  if (!chartRoot) return;
+
+  if (!data || data.length === 0) {
+    chartRoot.innerHTML = `<div class="category-empty">No hay datos para mostrar.</div>`;
+    return;
+  }
+
+  const totals = data.reduce((acc, item) => {
+    const categoria = getNormalizedCategory(item.categoria);
+    const importe = Number(item.importe) || 0;
+    acc[categoria] = (acc[categoria] || 0) + Math.abs(importe);
+    return acc;
+  }, {});
+
+  const entries = Object.entries(totals)
+    .filter(([, value]) => value > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) {
+    chartRoot.innerHTML = `<div class="category-empty">No hay movimientos con importe válido.</div>`;
+    return;
+  }
+
+  const totalAmount = entries.reduce((sum, [, value]) => sum + value, 0);
+  const visibleEntries = entries.slice(0, 8);
+  const remaining = entries.slice(8);
+
+  if (remaining.length > 0) {
+    const remainingTotal = remaining.reduce((sum, [, value]) => sum + value, 0);
+    visibleEntries.push(["otros", remainingTotal]);
+  }
+
+  const colors = [
+    "#3b76f6",
+    "#2a9d8f",
+    "#fca311",
+    "#e63946",
+    "#8d99ae",
+    "#9d4edd",
+    "#f77f00",
+    "#4361ee",
+  ];
+
+  let startAngle = 0;
+  const radius = 80;
+  const cx = 90;
+  const cy = 90;
+
+  const slices = visibleEntries
+    .map(([categoria, value], index) => {
+      const percentage = totalAmount ? value / totalAmount : 0;
+      const sliceAngle = percentage * Math.PI * 2;
+      const endAngle = startAngle + sliceAngle;
+      const x1 = cx + radius * Math.cos(startAngle);
+      const y1 = cy + radius * Math.sin(startAngle);
+      const x2 = cx + radius * Math.cos(endAngle);
+      const y2 = cy + radius * Math.sin(endAngle);
+      const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+      const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+      startAngle = endAngle;
+      return `
+        <path d="${pathData}" fill="${colors[index % colors.length]}" />
+      `;
+    })
+    .join("");
+
+  const legendItems = visibleEntries
+    .map(([categoria, value], index) => {
+      const porcentaje = totalAmount ? Math.round((value / totalAmount) * 100) : 0;
+      return `
+        <div class="pie-legend-item" data-category="${categoria}">
+          <span class="pie-swatch" style="background:${colors[index % colors.length]}"></span>
+          <span class="pie-category">${categoria}</span>
+          <span class="pie-value">${porcentaje}%</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  chartRoot.innerHTML = `
+    <div class="pie-chart-wrapper">
+      <svg viewBox="0 0 180 180" class="pie-chart-svg" aria-label="Gráfico de categorías">
+        ${slices}
+      </svg>
+      <div class="pie-legend">${legendItems}</div>
+    </div>
+  `;
+
+  chartRoot.querySelectorAll(".pie-legend-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const category = item.dataset.category;
+      applyCategoryFilter(category);
+    });
+  });
+}
+
 async function renderDashboard(tipo = "all") {
   try {
     const summary = await fetchSummary();
@@ -111,13 +253,19 @@ async function renderDashboard(tipo = "all") {
 async function renderMovements(tipo = "all") {
   try {
     const list = await fetchMovements(tipo);
-    const data = list.data || [];
+    let data = list.data || [];
 
     tableBody.innerHTML = "";
     tableStatusEl.textContent = "";
 
+    if (currentCategoryFilter) {
+      const normalized = currentCategoryFilter.toLowerCase();
+      data = data.filter((g) => getNormalizedCategory(g.categoria) === normalized);
+      tableStatusEl.textContent = `Filtrando categoría: ${currentCategoryFilter}`;
+    }
+
     if (data.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan='6'>No hay movimientos registrados.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan='7'>No hay movimientos registrados.</td></tr>`;
       return;
     }
 
@@ -129,6 +277,7 @@ async function renderMovements(tipo = "all") {
         <td>${g.id}</td>
         <td>${g.fecha}</td>
         <td>${g.concepto}</td>
+        <td class="categoria-cell" data-id="${g.id}">${g.categoria || '<span class="categoria-placeholder">Sin categoría</span>'}</td>
         <td>${formatCurrency(g.importe)}</td>
         <td>${g.origen || "-"}</td>
         <td>
@@ -149,18 +298,70 @@ async function renderMovements(tipo = "all") {
         editFields.concepto.value = item.concepto;
         editFields.importe.value = item.importe;
         editFields.origen.value = item.origen || "";
+        editFields.categoria.value = item.categoria || "";
+        editFields.saldo = item.saldo || null;
+        editFields.archivo = item.archivo || null;
         editPanel.hidden = false;
         editFields.fecha.focus();
       });
     });
 
     selectAllCheckbox.checked = false;
+    renderCategoryChart(data);
 
     tableBody.querySelectorAll(".delete").forEach((btn) => {
       btn.addEventListener("click", async () => {
         if (!window.confirm("¿Eliminar este movimiento?")) return;
         const id = btn.dataset.id;
         await deleteMovement(id);
+      });
+    });
+
+    tableBody.querySelectorAll(".categoria-cell").forEach((cell) => {
+      cell.addEventListener("click", () => {
+        const id = cell.dataset.id;
+        // Obtener el texto actual, manejando el caso del placeholder
+        let currentText = "";
+        if (cell.querySelector('.categoria-placeholder')) {
+          currentText = ""; // Está vacío
+        } else {
+          currentText = cell.textContent.trim();
+        }
+        
+        // Crear input
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = currentText;
+        input.className = "categoria-input";
+        input.dataset.id = id;
+        
+        // Reemplazar celda con input
+        cell.innerHTML = "";
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+        
+        const saveAndClose = async () => {
+          const nuevaCategoria = input.value.trim();
+          cell.innerHTML = nuevaCategoria || '<span class="categoria-placeholder">Sin categoría</span>';
+          
+          if (nuevaCategoria !== currentText) {
+            await reclassifyMovement(id, nuevaCategoria);
+          }
+        };
+        
+        const cancelAndClose = () => {
+          cell.innerHTML = currentText || '<span class="categoria-placeholder">Sin categoría</span>';
+        };
+        
+        input.addEventListener("blur", saveAndClose);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            saveAndClose();
+          } else if (e.key === "Escape") {
+            cancelAndClose();
+          }
+        });
       });
     });
   } catch (error) {
@@ -188,6 +389,28 @@ async function deleteMovement(id) {
   }
 }
 
+async function reclassifyMovement(id, categoria) {
+  try {
+    const res = await fetch(`${API_BASE}/expenses/${id}/reclassify`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categoria }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || "No se pudo reclasificar");
+    }
+
+    tableStatusEl.textContent = data.message || "Movimiento reclasificado";
+    tableStatusEl.style.color = "#0a8f44";
+    await renderDashboard(tipoFiltro.value);
+  } catch (error) {
+    tableStatusEl.textContent = `Error: ${error.message}`;
+    tableStatusEl.style.color = "#cc0022";
+  }
+}
+
 async function deleteSelectedMovements(ids = []) {
   try {
     const res = await fetch(`${API_BASE}/expenses/batch-delete`, {
@@ -207,6 +430,27 @@ async function deleteSelectedMovements(ids = []) {
   } catch (error) {
     tableStatusEl.textContent = `Error: ${error.message}`;
     tableStatusEl.style.color = "#cc0022";
+  }
+}
+
+async function createMovement(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/expenses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || "No se pudo crear el movimiento");
+    }
+    manualStatus.textContent = data.message || "Movimiento agregado";
+    manualStatus.style.color = "#0a8f44";
+    manualForm.reset();
+    await renderDashboard(tipoFiltro.value);
+  } catch (error) {
+    manualStatus.textContent = `Error: ${error.message}`;
+    manualStatus.style.color = "#cc0022";
   }
 }
 
@@ -267,6 +511,54 @@ async function uploadFile() {
   }
 }
 
+async function uploadBankCSV() {
+  console.log("uploadBankCSV function called");
+  
+  const file = bankFileInput.files[0];
+  console.log("Selected file:", file);
+  
+  if (!file) {
+    console.log("No file selected");
+    bankUploadStatus.textContent = "Selecciona un archivo CSV.";
+    bankUploadStatus.style.color = "#cc0022";
+    return;
+  }
+
+  const bankType = bankSelect.value;
+  console.log("Bank type:", bankType);
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    bankUploadStatus.textContent = "Importando transacciones...";
+    bankUploadStatus.style.color = "#0a8f44";
+
+    const url = `${API_BASE}/bank/import-csv?bank_type=${bankType}`;
+    console.log("Fetching URL:", url);
+    const res = await fetch(url, { 
+      method: "POST", 
+      body: formData 
+    });
+    console.log("Response status:", res.status);
+    const result = await res.json();
+    console.log("Response data:", result);
+
+    if (!res.ok) {
+      throw new Error(result.detail || result.message || "Error en la importación");
+    }
+
+    bankUploadStatus.textContent = result.message || "Importación exitosa";
+    bankUploadStatus.style.color = "#0a8f44";
+    bankFileInput.value = "";
+    await renderDashboard(tipoFiltro.value);
+    openTab("details");
+  } catch (error) {
+    console.error("Error in uploadBankCSV:", error);
+    bankUploadStatus.textContent = `Error: ${error.message}`;
+    bankUploadStatus.style.color = "#cc0022";
+  }
+}
+
 btnUpload.addEventListener("click", uploadFile);
 btnRefresh.addEventListener("click", () => renderDashboard(tipoFiltro.value));
 tipoFiltro.addEventListener("change", () => renderMovements(tipoFiltro.value));
@@ -277,6 +569,8 @@ selectAllCheckbox.addEventListener("change", () => {
     input.checked = checked;
   });
 });
+
+btnUploadBank.addEventListener("click", uploadBankCSV);
 
 btnDeleteSelected.addEventListener("click", async () => {
   const selected = Array.from(tableBody.querySelectorAll(".check-select:checked")).map((c) => Number(c.dataset.id));
@@ -299,11 +593,42 @@ editForm.addEventListener("submit", (event) => {
     concepto: editFields.concepto.value,
     importe: Number(editFields.importe.value),
     origen: editFields.origen.value || null,
-    saldo: null,
-    archivo: null,
+    categoria: editFields.categoria.value || null,
+    saldo: editFields.saldo,
+    archivo: editFields.archivo,
   };
 
   updateMovement(payload);
+});
+
+manualForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const payload = {
+    fecha: manualFecha.value,
+    concepto: manualConcepto.value,
+    importe: Number(manualImporte.value),
+    origen: manualOrigen.value || null,
+    categoria: manualCategoria.value || null,
+    saldo: null,
+    archivo: null,
+  };
+  createMovement(payload);
+});
+
+btnReclassify.addEventListener("click", async () => {
+  try {
+    const res = await fetch(`${API_BASE}/expenses/reclassify`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || "No se pudo reclasificar");
+    }
+    tableStatusEl.textContent = data.message || "Reclasificación completada";
+    tableStatusEl.style.color = "#0a8f44";
+    await renderDashboard(tipoFiltro.value);
+  } catch (error) {
+    tableStatusEl.textContent = `Error: ${error.message}`;
+    tableStatusEl.style.color = "#cc0022";
+  }
 });
 
 editCancel.addEventListener("click", () => {

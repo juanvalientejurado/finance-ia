@@ -10,8 +10,10 @@ from app.ocr.image_reader import extract_text_from_image
 from app.ocr.pdf_reader import extract_text_from_pdf
 from app.parser.parser_image import parse_expenses
 from app.parser.parser_pdf import parse_vertical_blocks
+from app.classifier.model import classify_concept
 from app.db import db
-from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse, GastoCreate, GastoResponse
+from app.bank_integration import parse_bank_csv, get_supported_banks
+from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse, GastoCreate, GastoResponse, ReclassifyRequest, BankConnectionRequest, BankTransaction, BankConnectionRequest, BankTransaction
 from pydantic import BaseModel
 
 
@@ -54,14 +56,20 @@ async def upload_expense_image(file: UploadFile = File(...)):
         # Guardar en BD
         saved_gastos = []
         for gasto in gastos:
+            categoria = classify_concept(
+                gasto["concepto"],
+                float(gasto["importe"])
+            )
             db.insert_gasto(
                 concepto=gasto["concepto"],
                 fecha=gasto["fecha"],
                 importe=float(gasto["importe"]),
                 saldo=float(gasto["saldo"]) if gasto.get("saldo") else None,
                 origen="imagen",
-                archivo=file.filename
+                archivo=file.filename,
+                categoria=categoria
             )
+            gasto["categoria"] = categoria
             saved_gastos.append(gasto)
         
         return {
@@ -101,14 +109,20 @@ async def upload_expense_pdf(file: UploadFile = File(...)):
         
         # Guardar en BD
         for gasto in gastos:
+            categoria = classify_concept(
+                gasto["concepto"],
+                float(gasto["importe"])
+            )
             db.insert_gasto(
                 concepto=gasto["concepto"],
                 fecha=gasto["fecha"],
                 importe=float(gasto["importe"]),
                 saldo=float(gasto["saldo"]) if gasto.get("saldo") else None,
                 origen="pdf",
-                archivo=file.filename
+                archivo=file.filename,
+                categoria=categoria
             )
+            gasto["categoria"] = categoria
         
         # Limpiar
         temp_path.unlink()
@@ -158,6 +172,30 @@ async def get_all_expenses(tipo: Optional[str] = Query(None, description="Filtra
         raise HTTPException(status_code=500, detail=f"Error al obtener movimientos: {str(e)}")
 
 
+@router.post("/expenses", response_model=GastoResponse)
+async def create_expense(gasto: GastoCreate):
+    """Crear un gasto manualmente."""
+    try:
+        categoria = gasto.categoria if gasto.categoria else classify_concept(gasto.concepto, gasto.importe)
+        gasto_id = db.insert_gasto(
+            concepto=gasto.concepto,
+            fecha=gasto.fecha,
+            importe=gasto.importe,
+            saldo=gasto.saldo,
+            origen=gasto.origen,
+            archivo=gasto.archivo,
+            categoria=categoria,
+        )
+        nuevo_gasto = db.get_gasto_by_id(gasto_id)
+        return {
+            "success": True,
+            "message": "Gasto creado correctamente",
+            "data": nuevo_gasto
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al crear gasto: {str(e)}")
+
+
 @router.get("/expenses/{gasto_id}", response_model=ExpensesResponse)
 async def get_expense(gasto_id: int):
     """Obtener un gasto específico por ID."""
@@ -185,6 +223,7 @@ async def update_expense(gasto_id: int, gasto: GastoCreate):
         if not existing:
             raise HTTPException(status_code=404, detail=f"Gasto con ID {gasto_id} no encontrado")
 
+        categoria = gasto.categoria if gasto.categoria else classify_concept(gasto.concepto, gasto.importe)
         updated = db.update_gasto(
             gasto_id=gasto_id,
             concepto=gasto.concepto,
@@ -193,6 +232,7 @@ async def update_expense(gasto_id: int, gasto: GastoCreate):
             saldo=gasto.saldo,
             origen=gasto.origen,
             archivo=gasto.archivo,
+            categoria=categoria,
         )
 
         if not updated:
@@ -257,6 +297,40 @@ async def batch_delete_expenses(request: BatchDeleteRequest):
         raise HTTPException(status_code=500, detail=f"Error en eliminación masiva: {str(e)}")
 
 
+@router.post("/expenses/reclassify", response_model=ExpensesResponse)
+async def reclassify_expenses():
+    """Reclasificar todos los gastos existentes usando el clasificador."""
+    try:
+        actualizados = db.reclassify_all_gastos()
+        return {
+            "success": True,
+            "message": f"Se reclasificaron {actualizados} gastos",
+            "data": {"actualizados": actualizados}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al reclasificar gastos: {str(e)}")
+
+
+@router.put("/expenses/{gasto_id}/reclassify", response_model=GastoResponse)
+async def reclassify_expense(gasto_id: int, request: ReclassifyRequest):
+    """Reclasificar un gasto específico con una categoría manual."""
+    try:
+        success = db.reclassify_gasto(gasto_id, request.categoria)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Gasto con ID {gasto_id} no encontrado")
+        
+        gasto_actualizado = db.get_gasto_by_id(gasto_id)
+        return {
+            "success": True,
+            "message": f"Gasto {gasto_id} reclasificado correctamente",
+            "data": gasto_actualizado
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al reclasificar gasto: {str(e)}")
+
+
 @router.get("/expenses/stats/summary", response_model=ExpensesResponse)
 async def get_expenses_summary():
     """Obtener resumen separado de gastos e ingresos."""
@@ -308,3 +382,87 @@ async def get_expenses_summary():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al calcular resumen: {str(e)}")
+
+
+@router.post("/bank/import-csv", response_model=ExpensesResponse)
+async def import_bank_csv(
+    file: UploadFile = File(...),
+    bank_type: str = Query("generic", description="Tipo de banco para parsing específico")
+):
+    """
+    Importar extracto bancario desde archivo CSV.
+    
+    Args:
+        file: Archivo CSV del banco
+        bank_type: Tipo de banco (bbva, santander, bankinter, etc.)
+    """
+    try:
+        # Validar tipo de banco
+        supported_banks = get_supported_banks()
+        if bank_type not in supported_banks:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Banco no soportado. Bancos disponibles: {', '.join(supported_banks)}"
+            )
+        
+        # Leer archivo
+        content = await file.read()
+        csv_content = content.decode('utf-8')
+        
+        # Parsear CSV
+        transactions = parse_bank_csv(csv_content, bank_type)
+        if not transactions:
+            raise HTTPException(status_code=400, detail="No se pudieron parsear transacciones del CSV")
+        
+        # Guardar en BD
+        saved_count = 0
+        for transaction in transactions:
+            try:
+                # Clasificar automáticamente
+                categoria = classify_concept(transaction.concepto, transaction.importe)
+                
+                db.insert_gasto(
+                    concepto=transaction.concepto,
+                    fecha=transaction.fecha,
+                    importe=transaction.importe,
+                    saldo=transaction.saldo,
+                    origen=f"csv-{bank_type}",
+                    archivo=file.filename,
+                    categoria=categoria
+                )
+                saved_count += 1
+            except Exception as e:
+                print(f"Error guardando transacción: {e}")
+                continue
+        
+        return {
+            "success": True,
+            "message": f"Se importaron {saved_count} transacciones de {len(transactions)} del CSV de {bank_type}",
+            "data": {
+                "transacciones_importadas": saved_count,
+                "transacciones_totales": len(transactions),
+                "banco": bank_type
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al importar CSV bancario: {str(e)}")
+
+
+@router.get("/bank/supported-banks", response_model=ExpensesResponse)
+async def get_supported_banks_list():
+    """Obtener lista de bancos soportados para importación CSV."""
+    try:
+        banks = get_supported_banks()
+        return {
+            "success": True,
+            "message": f"Se encontraron {len(banks)} bancos soportados",
+            "data": {
+                "bancos_soportados": banks,
+                "nota": "Para bancos no listados, usar 'generic' que intenta detectar automáticamente los campos"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener bancos soportados: {str(e)}")

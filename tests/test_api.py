@@ -1,3 +1,4 @@
+import io
 import pytest
 from fastapi.testclient import TestClient
 from app.api.main import app
@@ -185,6 +186,110 @@ class TestStatsEndpoint:
             assert data["total_movimientos"] == 0
         finally:
             db.DB_PATH = original_db_path
+
+
+class TestBankEndpoints:
+    """Tests para los endpoints de integración bancaria."""
+
+    def test_supported_banks_list(self, client):
+        response = client.get("/api/v1/bank/supported-banks")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "bancos_soportados" in data["data"]
+        assert "bbva" in data["data"]["bancos_soportados"]
+        assert "generic" in data["data"]["bancos_soportados"]
+
+    def test_import_bank_csv_generic_success(self, client, test_db):
+        csv_content = (
+            "Fecha,Concepto,Importe,Saldo\n"
+            "01/04/2025,Prueba gasto,-10.50,990.50\n"
+            "02/04/2025,Ingreso prueba,100.00,1090.50\n"
+        )
+        response = client.post(
+            "/api/v1/bank/import-csv?bank_type=generic",
+            files={
+                "file": ("test.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["transacciones_importadas"] == 2
+        assert data["data"]["banco"] == "generic"
+
+    def test_import_bank_csv_unsupported_bank(self, client):
+        csv_content = "Fecha,Concepto,Importe\n01/04/2025,Prueba,-10.50\n"
+        response = client.post(
+            "/api/v1/bank/import-csv?bank_type=desconocido",
+            files={
+                "file": ("test.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")
+            },
+        )
+        assert response.status_code == 400
+        assert "Banco no soportado" in response.json()["detail"]
+
+
+class TestExpenseModificationEndpoint:
+    """Tests para crear, actualizar y reclasificar gastos."""
+
+    def test_create_expense(self, client, test_db):
+        payload = {
+            "concepto": "Compra test",
+            "fecha": "05/04/2025",
+            "importe": -25.00,
+            "saldo": 975.50,
+            "origen": "manual",
+            "archivo": "ticket.pdf"
+        }
+        response = client.post("/api/v1/expenses", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["concepto"] == "Compra test"
+
+    def test_update_expense(self, client, test_db):
+        response = client.get("/api/v1/expenses")
+        gasto_id = response.json()["data"][0]["id"]
+        payload = {
+            "concepto": "Café actualizado",
+            "fecha": "01/04/2025",
+            "importe": -3.00,
+            "saldo": 999.00,
+            "origen": "manual",
+            "archivo": "ticket_update.jpg"
+        }
+        response = client.put(f"/api/v1/expenses/{gasto_id}", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["concepto"] == "Café actualizado"
+        assert data["data"]["archivo"] == "ticket_update.jpg"
+
+    def test_batch_delete_expenses(self, client, test_db):
+        response = client.get("/api/v1/expenses")
+        ids = [item["id"] for item in response.json()["data"]][:2]
+        response = client.post("/api/v1/expenses/batch-delete", json={"ids": ids})
+        assert response.status_code == 200
+        assert response.json()["data"]["eliminados"] == len(ids)
+
+    def test_reclassify_expenses(self, client, test_db):
+        response = client.post("/api/v1/expenses/reclassify")
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert "reclasificaron" in response.json()["message"].lower()
+
+    def test_reclassify_expense(self, client, test_db):
+        response = client.get("/api/v1/expenses")
+        gasto_id = response.json()["data"][0]["id"]
+        payload = {"categoria": "Viajes"}
+        response = client.put(f"/api/v1/expenses/{gasto_id}/reclassify", json=payload)
+        assert response.status_code == 200
+        assert response.json()["data"]["categoria"] == "Viajes"
+
+    def test_batch_delete_empty_ids(self, client, test_db):
+        response = client.post("/api/v1/expenses/batch-delete", json={"ids": []})
+        assert response.status_code == 400
+        assert "Lista de IDs vacía" in response.json()["detail"]
 
 
 class TestImageUploadEndpoint:
