@@ -86,3 +86,28 @@ def delete_gasto(gasto_id: int) -> bool:
         cursor.execute("DELETE FROM gastos WHERE id = ?", (gasto_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def update_gasto(
+        gasto_id: int,
+        concepto: str,
+        fecha: str,
+        importe: float,
+        saldo: Optional[float] = None,
+        origen: Optional[str] = None,
+        archivo: Optional[str] = None,
+):
+    "Actualiza un gasto por su ID"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE gastos
+            SET concepto = ?, fecha = ?, importe = ?, saldo = ?, origen = ?, archivo = ?
+            WHERE id = ?
+            """,
+            (concepto, fecha, importe, saldo, origen, archivo, gasto_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0

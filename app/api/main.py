@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from app.api.endpoints import router
@@ -30,6 +31,9 @@ def create_app() -> FastAPI:
 
     # Incluir routers
     app.include_router(router, prefix="/api/v1", tags=["expenses"])
+
+    # Servir frontend estático
+    app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
     return app
 

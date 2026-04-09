@@ -38,10 +38,61 @@ Ideal para personas que quieren tener el control completo de sus finanzas sin de
    complemento español: https://github.com/tesseract-ocr/tessdata/blob/main/spa.traineddata?raw=true
    poppler: Desvargar (https://github.com/oschwartz10612/poppler-windows/releases), poner en C:\ProgramFiles . Añadir al PATH C:\Program Files\poppler-24.08.0\Library\bin . Reiniciar editor o terminal
 
-5. Ejecuta la app:
+5. Ejecuta la app (Streamlit):
    ```bash
    streamlit run main.py
    ```
+
+---
+
+## 🖥️ Nueva interfaz web local (front-end + API)
+
+Se ha añadido un front-end estático que se sirve desde FastAPI:
+
+- `frontend/index.html` (estructura + elementos de UI)
+- `frontend/style.css` (diseño visual)
+- `frontend/app.js` (lógica JS, fetch al backend y render)
+
+Y el backend ahora monta los archivos estáticos:
+- `app/api/main.py`: `app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")`
+
+### ✨ Ejecutar en modo API + UI
+
+1. Activar virtualenv:
+```bash
+source .venv/bin/activate
+```
+2. Ejecutar FastAPI:
+```bash
+.venv/bin/python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+3. Abrir en navegador:
+- `http://127.0.0.1:8000/`
+
+### 🧪 Comprobar API (opcional)
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+curl http://127.0.0.1:8000/api/v1/expenses/stats/summary
+```
+
+### 📁 Endpoints principales usados por el front-end
+- `GET /api/v1/expenses` (listar movimientos)
+- `GET /api/v1/expenses/stats/summary` (métricas de balance)
+- `POST /api/v1/expenses/from-image` (subir imagen)
+- `POST /api/v1/expenses/from-pdf` (subir PDF)
+- `DELETE /api/v1/expenses/{id}` (eliminar registro)
+- `PUT /api/v1/expenses/{id}` (editar registro)
+- `POST /api/v1/expenses/batch-delete` (eliminar múltiples registros)
+
+### 🆕 Nuevas mejoras implementadas
+- UI con pestañas: `Dashboard`, `Subir archivo`, `Gastos`.
+- Drag and drop para subida de archivos en `Subir archivo`.
+- Filtro `gastos`/`ingresos` se aplica inmediatamente al cambiar opción.
+- Actions de `Editar`/`Eliminar` aparecen al pasar el ratón sobre la fila.
+- Selección múltiple de gastos con checkbox y botón `Eliminar seleccionados`.
+- Balance y saldo total cambian de color (verde positivo / rojo negativo).
+- Placeholder de gráfico circular por categoría (futura mejora).
+- `Saldo total de cuenta` ahora visible en dashboard.
 
 ---
 
