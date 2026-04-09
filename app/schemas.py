@@ -28,6 +28,11 @@ class GastoCreate(GastoBase):
     pass
 
 
+class ReclassifyRequest(BaseModel):
+    """Esquema para reclasificar un gasto manualmente."""
+    categoria: str = Field(..., min_length=1, description="Nueva categoría para el gasto")
+
+
 class Gasto(GastoBase):
     """Esquema de gasto con ID."""
     id: int = Field(..., description="ID único del gasto")
