@@ -12,7 +12,8 @@ from app.parser.parser_image import parse_expenses
 from app.parser.parser_pdf import parse_vertical_blocks
 from app.classifier.model import classify_concept
 from app.db import db
-from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse, GastoCreate, GastoResponse, ReclassifyRequest
+from app.bank_integration import parse_bank_csv, get_supported_banks
+from app.schemas import HealthResponse, ExpensesResponse, GastosListResponse, GastoCreate, GastoResponse, ReclassifyRequest, BankConnectionRequest, BankTransaction, BankConnectionRequest, BankTransaction
 from pydantic import BaseModel
 
 
@@ -381,3 +382,87 @@ async def get_expenses_summary():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al calcular resumen: {str(e)}")
+
+
+@router.post("/bank/import-csv", response_model=ExpensesResponse)
+async def import_bank_csv(
+    file: UploadFile = File(...),
+    bank_type: str = Query("generic", description="Tipo de banco para parsing específico")
+):
+    """
+    Importar extracto bancario desde archivo CSV.
+    
+    Args:
+        file: Archivo CSV del banco
+        bank_type: Tipo de banco (bbva, santander, bankinter, etc.)
+    """
+    try:
+        # Validar tipo de banco
+        supported_banks = get_supported_banks()
+        if bank_type not in supported_banks:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Banco no soportado. Bancos disponibles: {', '.join(supported_banks)}"
+            )
+        
+        # Leer archivo
+        content = await file.read()
+        csv_content = content.decode('utf-8')
+        
+        # Parsear CSV
+        transactions = parse_bank_csv(csv_content, bank_type)
+        if not transactions:
+            raise HTTPException(status_code=400, detail="No se pudieron parsear transacciones del CSV")
+        
+        # Guardar en BD
+        saved_count = 0
+        for transaction in transactions:
+            try:
+                # Clasificar automáticamente
+                categoria = classify_concept(transaction.concepto, transaction.importe)
+                
+                db.insert_gasto(
+                    concepto=transaction.concepto,
+                    fecha=transaction.fecha,
+                    importe=transaction.importe,
+                    saldo=transaction.saldo,
+                    origen=f"csv-{bank_type}",
+                    archivo=file.filename,
+                    categoria=categoria
+                )
+                saved_count += 1
+            except Exception as e:
+                print(f"Error guardando transacción: {e}")
+                continue
+        
+        return {
+            "success": True,
+            "message": f"Se importaron {saved_count} transacciones de {len(transactions)} del CSV de {bank_type}",
+            "data": {
+                "transacciones_importadas": saved_count,
+                "transacciones_totales": len(transactions),
+                "banco": bank_type
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al importar CSV bancario: {str(e)}")
+
+
+@router.get("/bank/supported-banks", response_model=ExpensesResponse)
+async def get_supported_banks_list():
+    """Obtener lista de bancos soportados para importación CSV."""
+    try:
+        banks = get_supported_banks()
+        return {
+            "success": True,
+            "message": f"Se encontraron {len(banks)} bancos soportados",
+            "data": {
+                "bancos_soportados": banks,
+                "nota": "Para bancos no listados, usar 'generic' que intenta detectar automáticamente los campos"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener bancos soportados: {str(e)}")

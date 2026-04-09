@@ -54,16 +54,39 @@
       </section>
 
       <section class="panel" id="upload">
-        <div class="box"> 
-          <h2>Subir comprobante</h2>
-          <div id="drop-zone" class="drop-zone">
-            <p>Arrastra y suelta archivo aquí</p>
-            <p>o haz clic para seleccionar imagen/PDF</p>
-            <input type="file" id="file-input" accept="image/*,.pdf" />
+        <div class="upload-grid">
+          <div class="box"> 
+            <h2>📄 Subir comprobante</h2>
+            <div id="drop-zone" class="drop-zone">
+              <p>Arrastra y suelta archivo aquí</p>
+              <p>o haz clic para seleccionar imagen/PDF</p>
+              <input type="file" id="file-input" accept="image/*,.pdf" />
+            </div>
+            <button id="btn-upload" class="primary">Subir</button>
+            <p id="upload-status" class="message"></p>
+            <small class="hint">Tu documento se procesa y los gastos se cargan automáticamente.</small>
           </div>
-          <button id="btn-upload" class="primary">Subir</button>
-          <p id="upload-status" class="message"></p>
-          <small class="hint">Tu documento se procesa y los gastos se cargan automáticamente.</small>
+          
+          <div class="box">
+            <h2>🏦 Importar CSV bancario</h2>
+            <div class="bank-upload-section">
+              <label for="bank-select">Banco:</label>
+              <select id="bank-select" class="bank-select">
+                <option value="generic">Genérico</option>
+                <option value="bbva">BBVA</option>
+                <option value="santander">Santander</option>
+                <option value="bankinter">Bankinter</option>
+                <option value="caixabank">CaixaBank</option>
+              </select>
+              <input type="file" id="bank-file-input" accept=".csv" />
+              <button id="btn-upload-bank" class="secondary">Importar CSV</button>
+            </div>
+            <p id="bank-upload-status" class="message"></p>
+            <small class="hint">
+              Descarga tu extracto bancario en formato CSV desde la banca online.<br>
+              Se detectarán automáticamente las transacciones y se clasificarán por categoría.
+            </small>
+          </div>
         </div>
       </section>
 

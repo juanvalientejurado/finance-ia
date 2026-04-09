@@ -9,6 +9,7 @@ Ideal para personas que quieren tener el control completo de sus finanzas sin de
 
 - 📸 OCR local de capturas de pantalla y tickets
 - 📄 Lectura de extractos bancarios en PDF
+- 🏦 **Importación automática de CSV bancarios** (BBVA, Santander, Bankinter, etc.)
 - 🤖 Clasificación automática por categoría de gasto
 - 💬 Preguntas en lenguaje natural sobre tus finanzas
 - 📊 Visualización y análisis interactivo con Streamlit
@@ -93,6 +94,29 @@ curl http://127.0.0.1:8000/api/v1/expenses/stats/summary
 - Balance y saldo total cambian de color (verde positivo / rojo negativo).
 - Placeholder de gráfico circular por categoría (futura mejora).
 - `Saldo total de cuenta` ahora visible en dashboard.
+
+### 🏦 Importación bancaria (CSV)
+
+GastaIA ahora soporta la importación automática de extractos bancarios en formato CSV:
+
+1. **Descarga tu extracto**: Ve a la banca online y descarga tu extracto en formato CSV
+2. **Selecciona tu banco**: Elige entre BBVA, Santander, Bankinter, CaixaBank u otros
+3. **Sube el archivo**: La app detectará automáticamente las transacciones
+4. **Clasificación automática**: Los gastos se clasifican por categoría automáticamente
+
+**Bancos soportados:**
+- BBVA
+- Santander  
+- Bankinter
+- CaixaBank
+- Genérico (intenta detectar campos automáticamente)
+
+**Ejemplo de CSV:**
+```csv
+Fecha,Concepto,Importe,Saldo
+31/12/2023,TRANSFERENCIA RECIBIDA,500.00,1250.50
+30/12/2023,PAGO EN SUPERMERCADO,-45.67,750.50
+```
 
 ---
 

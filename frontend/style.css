@@ -70,6 +70,39 @@ tr.negative-row td { background: rgba(230, 92, 114, 0.08); }
   border-radius: 3px;
   box-sizing: border-box;
 }
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.bank-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bank-select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
 .edit-panel { margin-top: 1rem; background: #f7f9ff; border: 1px solid #dce8ff; border-radius: 12px; padding: 1rem; }
 .edit-panel h3 { margin: 0 0 0.8rem; color: #273759; }
 .edit-actions { display: flex; gap: 0.6rem; }

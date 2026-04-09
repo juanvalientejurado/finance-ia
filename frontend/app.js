@@ -1,4 +1,7 @@
-const API_BASE = "/api/v1";
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM loaded, initializing bank upload...");
+});
 const statusEl = document.getElementById("upload-status");
 const tableStatusEl = document.getElementById("table-status");
 const tableBody = document.querySelector("#movimientos-table tbody");
@@ -6,6 +9,13 @@ const balanceEl = document.getElementById("balance");
 const totalGastosEl = document.getElementById("total-gastos");
 const totalIngresosEl = document.getElementById("total-ingresos");
 const totalMovimientosEl = document.getElementById("total-movimientos");
+
+const API_BASE = "/api/v1";
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+const btnUpload = document.getElementById("btn-upload");
+const btnRefresh = document.getElementById("btn-refresh");
+const btnFilter = document.getElementById("btn-filter");
 
 const tipoFiltro = document.getElementById("tipo-filtro");
 const selectAllCheckbox = document.getElementById("select-all");
@@ -18,11 +28,10 @@ const manualConcepto = document.getElementById("manual-concepto");
 const manualCategoria = document.getElementById("manual-categoria");
 const manualImporte = document.getElementById("manual-importe");
 const manualOrigen = document.getElementById("manual-origen");
-const fileInput = document.getElementById("file-input");
-const dropZone = document.getElementById("drop-zone");
-const btnUpload = document.getElementById("btn-upload");
-const btnRefresh = document.getElementById("btn-refresh");
-const btnFilter = document.getElementById("btn-filter");
+const bankFileInput = document.getElementById("bank-file-input");
+const btnUploadBank = document.getElementById("btn-upload-bank");
+const bankUploadStatus = document.getElementById("bank-upload-status");
+const bankSelect = document.getElementById("bank-select");
 let currentCategoryFilter = null;
 
 const panels = document.querySelectorAll(".panel");
@@ -502,6 +511,54 @@ async function uploadFile() {
   }
 }
 
+async function uploadBankCSV() {
+  console.log("uploadBankCSV function called");
+  
+  const file = bankFileInput.files[0];
+  console.log("Selected file:", file);
+  
+  if (!file) {
+    console.log("No file selected");
+    bankUploadStatus.textContent = "Selecciona un archivo CSV.";
+    bankUploadStatus.style.color = "#cc0022";
+    return;
+  }
+
+  const bankType = bankSelect.value;
+  console.log("Bank type:", bankType);
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    bankUploadStatus.textContent = "Importando transacciones...";
+    bankUploadStatus.style.color = "#0a8f44";
+
+    const url = `${API_BASE}/bank/import-csv?bank_type=${bankType}`;
+    console.log("Fetching URL:", url);
+    const res = await fetch(url, { 
+      method: "POST", 
+      body: formData 
+    });
+    console.log("Response status:", res.status);
+    const result = await res.json();
+    console.log("Response data:", result);
+
+    if (!res.ok) {
+      throw new Error(result.detail || result.message || "Error en la importación");
+    }
+
+    bankUploadStatus.textContent = result.message || "Importación exitosa";
+    bankUploadStatus.style.color = "#0a8f44";
+    bankFileInput.value = "";
+    await renderDashboard(tipoFiltro.value);
+    openTab("details");
+  } catch (error) {
+    console.error("Error in uploadBankCSV:", error);
+    bankUploadStatus.textContent = `Error: ${error.message}`;
+    bankUploadStatus.style.color = "#cc0022";
+  }
+}
+
 btnUpload.addEventListener("click", uploadFile);
 btnRefresh.addEventListener("click", () => renderDashboard(tipoFiltro.value));
 tipoFiltro.addEventListener("change", () => renderMovements(tipoFiltro.value));
@@ -512,6 +569,8 @@ selectAllCheckbox.addEventListener("change", () => {
     input.checked = checked;
   });
 });
+
+btnUploadBank.addEventListener("click", uploadBankCSV);
 
 btnDeleteSelected.addEventListener("click", async () => {
   const selected = Array.from(tableBody.querySelectorAll(".check-select:checked")).map((c) => Number(c.dataset.id));
